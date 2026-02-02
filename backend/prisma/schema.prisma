@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SELLER
+  PRODUCER
+  OPS_MANAGER
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(SELLER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  orders    Order[]  @relation("ProducerOrders")
+}
+
+enum OrderStatus {
+  CREATED
+  VALIDATED
+  IN_PRODUCTION
+  READY_FOR_SHIPMENT
+  SHIPPED
+  DELIVERED
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  externalId      String?
+  source          String
+  status          OrderStatus @default(CREATED)
+  customerName    String
+  customerEmail   String
+  shippingAddress String
+  totalAmount     Decimal
+  
+  producerId      Int?
+  producer        User?       @relation("ProducerOrders", fields: [producerId], references: [id])
+  
+  items           OrderItem[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  order       Order   @relation(fields: [orderId], references: [id])
+  productName String
+  sku         String?
+  quantity    Int
+  price       Decimal
+}
+
+model IntegrationConfig {
+  id            Int     @id @default(autoincrement())
+  platformName  String  @unique
+  apiKey        String?
+  apiSecret     String?
+  webhookSecret String?
+  isEnabled     Boolean @default(false)
+}
+
+model WebhookLog {
+  id           Int      @id @default(autoincrement())
+  platform     String
+  payload      Json
+  status       String   // SUCCESS, FAILED
+  errorMessage String?
+  createdAt    DateTime @default(now())
+}
